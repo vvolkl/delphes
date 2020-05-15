@@ -124,7 +124,7 @@ int main(int argc, char *argv[])
 
     modularDelphes = new Delphes("Delphes");
     modularDelphes->SetConfReader(confReader);
-    modularDelphes->SetTreeWriter(treeWriter);
+    //modularDelphes->SetTreeWriter(treeWriter);
 
     factory = modularDelphes->GetFactory();
     allParticleOutputArray = modularDelphes->ExportArray("allParticles");

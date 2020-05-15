@@ -35,7 +35,7 @@
 #include "ExRootAnalysis/ExRootConfReader.h"
 #include "ExRootAnalysis/ExRootFilter.h"
 #include "ExRootAnalysis/ExRootResult.h"
-#include "ExRootAnalysis/ExRootTreeWriter.h"
+//#include "ExRootAnalysis/ExRootTreeWriter.h"
 
 #include "TDatabasePDG.h"
 #include "TFolder.h"
@@ -94,11 +94,11 @@ void Delphes::Clear()
 
 //------------------------------------------------------------------------------
 
-void Delphes::SetTreeWriter(ExRootTreeWriter *treeWriter)
-{
-  treeWriter->SetName("TreeWriter");
-  GetFolder()->Add(treeWriter);
-}
+//void Delphes::SetTreeWriter(ExRootTreeWriter *treeWriter)
+//{
+//  treeWriter->SetName("TreeWriter");
+//  GetFolder()->Add(treeWriter);
+//}
 
 //------------------------------------------------------------------------------
 
