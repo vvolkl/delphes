@@ -34,7 +34,7 @@
 
 #include "classes/DelphesClasses.h"
 #include "classes/DelphesFactory.h"
-#include "classes/DelphesHepMCReader.h"
+#include "classes/DelphesSTDHEPReader.h"
 #include "Delphes.h"
 
 #include "ExRootAnalysis/ExRootProgressBar.h"
@@ -61,13 +61,13 @@ int main(int argc, char *argv[])
   FILE *inputFile = 0;
   TFile *outputFile = 0;
   TStopwatch readStopWatch, procStopWatch;
-  ExRootTreeWriter *treeWriter = 0;
-  ExRootTreeBranch *branchEvent = 0, *branchWeight = 0;
+  //ExRootTreeWriter *treeWriter = 0;
+  ExRootTreeBranch *branchEvent = 0;
   ExRootConfReader *confReader = 0;
   Delphes *modularDelphes = 0;
   DelphesFactory *factory = 0;
   TObjArray *stableParticleOutputArray = 0, *allParticleOutputArray = 0, *partonOutputArray = 0;
-  DelphesHepMCReader *reader = 0;
+  DelphesSTDHEPReader *reader = 0;
   Int_t i, maxEvents, skipEvents;
   Long64_t length, eventCounter;
 
@@ -78,7 +78,7 @@ int main(int argc, char *argv[])
          << " [input_file(s)]" << endl;
     cout << " config_file - configuration file in Tcl format," << endl;
     cout << " output_file - output file in ROOT format," << endl;
-    cout << " input_file(s) - input file(s) in HepMC format," << endl;
+    cout << " input_file(s) - input file(s) in STDHEP format," << endl;
     cout << " with no input_file, or when input_file is -, read standard input." << endl;
     return 1;
   }
@@ -101,10 +101,9 @@ int main(int argc, char *argv[])
       throw runtime_error(message.str());
     }
 
-    treeWriter = new ExRootTreeWriter(outputFile, "Delphes");
+    //treeWriter = new ExRootTreeWriter(outputFile, "Delphes");
 
-    branchEvent = treeWriter->NewBranch("Event", HepMCEvent::Class());
-    branchWeight = treeWriter->NewBranch("Weight", Weight::Class());
+    //branchEvent = treeWriter->NewBranch("Event", LHEFEvent::Class());
 
     confReader = new ExRootConfReader;
     confReader->ReadFile(argv[1]);
@@ -131,7 +130,7 @@ int main(int argc, char *argv[])
     stableParticleOutputArray = modularDelphes->ExportArray("stableParticles");
     partonOutputArray = modularDelphes->ExportArray("partons");
 
-    reader = new DelphesHepMCReader;
+    reader = new DelphesSTDHEPReader;
 
     modularDelphes->InitTask();
 
@@ -149,7 +148,7 @@ int main(int argc, char *argv[])
       else
       {
         cout << "** Reading " << argv[i] << endl;
-        inputFile = fopen(argv[i], "r");
+        inputFile = fopen(argv[i], "rb");
 
         if(inputFile == NULL)
         {
@@ -175,7 +174,7 @@ int main(int argc, char *argv[])
 
       // Loop over all objects
       eventCounter = 0;
-      treeWriter->Clear();
+      //treeWriter->Clear();
       modularDelphes->Clear();
       reader->Clear();
       readStopWatch.Start();
@@ -194,11 +193,10 @@ int main(int argc, char *argv[])
             procStopWatch.Stop();
 
             reader->AnalyzeEvent(branchEvent, eventCounter, &readStopWatch, &procStopWatch);
-            reader->AnalyzeWeight(branchWeight);
 
-            treeWriter->Fill();
+            //treeWriter->Fill();
 
-            treeWriter->Clear();
+            //treeWriter->Clear();
           }
 
           modularDelphes->Clear();
@@ -219,21 +217,21 @@ int main(int argc, char *argv[])
     } while(i < argc);
 
     modularDelphes->FinishTask();
-    treeWriter->Write();
+    //treeWriter->Write();
 
     cout << "** Exiting..." << endl;
 
     delete reader;
     delete modularDelphes;
     delete confReader;
-    delete treeWriter;
+    //delete treeWriter;
     delete outputFile;
 
     return 0;
   }
   catch(runtime_error &e)
   {
-    if(treeWriter) delete treeWriter;
+    //if(treeWriter) delete treeWriter;
     if(outputFile) delete outputFile;
     cerr << "** ERROR: " << e.what() << endl;
     return 1;

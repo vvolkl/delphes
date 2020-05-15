@@ -54,9 +54,9 @@ set ExecutionPath {
 
   ScalarHT
 
-  TreeWriter
 }
 
+# TreeWriter
 #################################
 # Propagate particles in cylinder
 #################################
@@ -779,27 +779,27 @@ module UniqueObjectFinder UniqueObjectFinder {
 # if needed (for jet constituent or other studies), uncomment the relevant
 # "add Branch ..." lines.
 
-module TreeWriter TreeWriter {
-# add Branch InputArray BranchName BranchClass
-  add Branch Delphes/allParticles Particle GenParticle
-
-  add Branch TrackMerger/tracks Track Track
-  add Branch Calorimeter/towers Tower Tower
-
-  add Branch HCal/eflowTracks EFlowTrack Track
-  add Branch ECal/eflowPhotons EFlowPhoton Tower
-  add Branch HCal/eflowNeutralHadrons EFlowNeutralHadron Tower
-
-  add Branch GenJetFinder/jets GenJet Jet
-  add Branch GenMissingET/momentum GenMissingET MissingET
- 
-  add Branch UniqueObjectFinder/jets Jet Jet
-  add Branch UniqueObjectFinder/electrons Electron Electron
-  add Branch UniqueObjectFinder/photons Photon Photon
-  add Branch UniqueObjectFinder/muons Muon Muon
-
-  add Branch FatJetFinder/jets FatJet Jet
-
-  add Branch MissingET/momentum MissingET MissingET
-  add Branch ScalarHT/energy ScalarHT ScalarHT
-}
+#module TreeWriter TreeWriter {
+## add Branch InputArray BranchName BranchClass
+#  add Branch Delphes/allParticles Particle GenParticle
+#
+#  add Branch TrackMerger/tracks Track Track
+#  add Branch Calorimeter/towers Tower Tower
+#
+#  add Branch HCal/eflowTracks EFlowTrack Track
+#  add Branch ECal/eflowPhotons EFlowPhoton Tower
+#  add Branch HCal/eflowNeutralHadrons EFlowNeutralHadron Tower
+#
+#  add Branch GenJetFinder/jets GenJet Jet
+#  add Branch GenMissingET/momentum GenMissingET MissingET
+# 
+#  add Branch UniqueObjectFinder/jets Jet Jet
+#  add Branch UniqueObjectFinder/electrons Electron Electron
+#  add Branch UniqueObjectFinder/photons Photon Photon
+#  add Branch UniqueObjectFinder/muons Muon Muon
+#
+#  add Branch FatJetFinder/jets FatJet Jet
+#
+#  add Branch MissingET/momentum MissingET MissingET
+#  add Branch ScalarHT/energy ScalarHT ScalarHT
+#}
