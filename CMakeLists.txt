@@ -61,6 +61,8 @@ add_subdirectory(modules)
 add_subdirectory(readers)
 add_subdirectory(cards)
 
+add_subdirectory(edm4hep_plugin)
+
 add_library(Delphes SHARED
   $<TARGET_OBJECTS:classes> 
   $<TARGET_OBJECTS:modules> 

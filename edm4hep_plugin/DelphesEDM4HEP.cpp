@@ -35,7 +35,7 @@
 #include "classes/DelphesClasses.h"
 #include "classes/DelphesFactory.h"
 #include "classes/DelphesHepMCReader.h"
-#include "modules/Delphes.h"
+#include "Delphes.h"
 
 #include "ExRootAnalysis/ExRootProgressBar.h"
 #include "ExRootAnalysis/ExRootTreeBranch.h"
@@ -56,7 +56,7 @@ void SignalHandler(int sig)
 
 int main(int argc, char *argv[])
 {
-  char appName[] = "DelphesHepMC";
+  char appName[] = "DelphesEDM4HEP";
   stringstream message;
   FILE *inputFile = 0;
   TFile *outputFile = 0;
