@@ -191,8 +191,14 @@ int main(int argc, char *argv[])
             procStopWatch.Start();
             modularDelphes->ProcessTask();
             procStopWatch.Stop();
+            const TObjArray* delphesColl = modularDelphes->ImportArray("UniqueObjectFinder/electrons");
+            for (int j = 0; j < delphesColl->GetEntries(); j++) {
+              auto cand = static_cast<Candidate*>(delphesColl->At(j));
+              std::cout << cand->Momentum.Pt() << std::endl;
+            }
 
-            reader->AnalyzeEvent(branchEvent, eventCounter, &readStopWatch, &procStopWatch);
+
+            //reader->AnalyzeEvent(branchEvent, eventCounter, &readStopWatch, &procStopWatch);
 
             //treeWriter->Fill();
 

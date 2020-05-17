@@ -114,22 +114,36 @@ void Delphes::Init()
   const ExRootConfReader::ExRootTaskMap *modules = confReader->GetModules();
   ExRootConfReader::ExRootTaskMap::const_iterator itModules;
 
+  ExRootConfParam branches = confReader->GetParam("TreeWriter::Branch");
+  Int_t nParams = branches.GetSize();
+  for(Int_t b = 0; b < nParams; b+=3) {
+    TString input = branches[b].GetString();
+    TString name = branches[b + 1].GetString();
+    TString className = branches[b + 2].GetString();
+    std::cout << input << "\t" << name << "\t" << className << std::endl;
+  }
+
+
   ExRootConfParam param = confReader->GetParam("::ExecutionPath");
   Long_t i, size = param.GetSize();
 
-  gRandom->SetSeed(confReader->GetInt("::RandomSeed", 0));
+  gRandom->SetSeed(confReader->GetInt("::RandomSeed", 12345));
 
   for(i = 0; i < size; ++i)
   {
     name = param[i].GetString();
+    std::cout << "module name: " << name << std::endl;
+    std::cout << "module name: " << name << std::endl;
     itModules = modules->find(name);
     if(itModules != modules->end())
     {
-      task = NewTask(itModules->second, itModules->first);
-      if(task)
-      {
-        task->SetFolder(GetFolder());
-        Add(task);
+      if (name  != "TreeWriter") {
+        task = NewTask(itModules->second, itModules->first);
+        if(task)
+        {
+          task->SetFolder(GetFolder());
+          Add(task);
+        }
       }
     }
     else

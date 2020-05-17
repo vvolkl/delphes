@@ -9,3 +9,7 @@ include_directories(
 add_executable(DelphesEDM4HEP DelphesEDM4HEP.cpp Delphes.cc)
 target_link_libraries(DelphesEDM4HEP Delphes)
 install(TARGETS DelphesEDM4HEP DESTINATION bin)
+
+add_executable(DelphesROOT_EDM4HEP DelphesROOT_EDM4HEP.cpp Delphes.cc)
+target_link_libraries(DelphesROOT_EDM4HEP Delphes)
+install(TARGETS DelphesROOT_EDM4HEP DESTINATION bin)
