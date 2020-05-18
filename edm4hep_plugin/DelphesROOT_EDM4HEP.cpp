@@ -21,8 +21,10 @@
 #include <memory>
 #include <sstream>
 #include <stdexcept>
+#include <functional>
 
 #include <map>
+#include <unordered_map>
 #include <vector>
 
 #include <signal.h>
@@ -71,11 +73,9 @@ void SignalHandler(int sig) {
 
 
 int main(int argc, char *argv[]) {
-  std::string appName = "DelphesROOT";
+  std::string appName = "DelphesROOT_EDM4HEP";
   std::unique_ptr<TFile> outputFile = nullptr;
   std::unique_ptr<TFile> inputFile = nullptr;
-  ExRootTreeWriter *treeWriter = 0; // todo: edm4hep
-  ExRootTreeBranch *branchEvent = 0; // todo: edm4hep
 
 
   Int_t i;
@@ -97,25 +97,41 @@ int main(int argc, char *argv[]) {
 
   try {
 
-  podio::EventStore store;
-  podio::ROOTWriter  writer("edm4hep_out.root", &store);
-  outputFile = std::unique_ptr<TFile>(TFile::Open(argv[2], "RECREATE"));
-
-    treeWriter = new ExRootTreeWriter(outputFile.get(), "Delphes");
-    branchEvent = treeWriter->NewBranch("Event", HepMCEvent::Class());
+    podio::EventStore store;
+    podio::ROOTWriter  writer(argv[2], &store);
 
     auto confReader = std::make_unique<ExRootConfReader>();
     confReader->ReadFile(argv[1]);
 
-    auto modularDelphes = std::make_unique<Delphes>("Delphes");
+    // todo: ROOT error on 6.20.04 if this is a unique pointer
+    Delphes* modularDelphes = new Delphes("Delphes");
     modularDelphes->SetConfReader(confReader.get());
 
     ExRootConfParam branches = confReader->GetParam("TreeWriter::Branch");
     int nParams = branches.GetSize();
 
-    // create the collections to be written
-    auto& mcps  = store.create<edm4hep::MCParticleCollection>("FatJet");
-    writer.registerForWrite("FatJet");
+    // create collections in eventstore
+    // unfortunately cannot create map with references
+    std::vector<std::reference_wrapper<edm4hep::ReconstructedParticleCollection>> recPartCollVec;
+    // TODO: need additional vectors for other 
+    for(int b = 0; b < nParams; b += 3) {
+      TString input = branches[b].GetString();
+      TString name = branches[b + 1].GetString();
+      TString className = branches[b + 2].GetString();
+      //std::cout <<  input << "\t" << name << "\t" << className << std::endl;
+      // classes that are to be translated to a Reconstructed Particle
+      if (className == "Jet" || className == "Electron" || className ==  "Muon" || className == "Photon") {
+        edm4hep::ReconstructedParticleCollection& _coll = store.create<edm4hep::ReconstructedParticleCollection>(name.Data());
+        writer.registerForWrite(name.Data());
+        recPartCollVec.push_back(_coll);
+      } else if (className == "GenParticle") {
+        //TODO
+      } else if (className == "ScalarHT") {
+        //TODO
+      } else if (className == "MissingET") {
+        //TODO
+      }
+    }
 
     auto chain = std::make_unique<TChain>("Delphes");
 
@@ -134,80 +150,73 @@ int main(int argc, char *argv[]) {
       chain->Add(argv[i]);
     }
 
-      ExRootTreeReader *treeReader = new ExRootTreeReader(chain.get());
-      numberOfEvents = treeReader->GetEntries();
+    ExRootTreeReader *treeReader = new ExRootTreeReader(chain.get());
+    numberOfEvents = treeReader->GetEntries();
 
-      ExRootProgressBar progressBar(-1);
-      // Loop over all objects
-      eventCounter = 0;
-      modularDelphes->Clear();
+    ExRootProgressBar progressBar(-1);
+    // Loop over all objects
+    eventCounter = 0;
+    modularDelphes->Clear();
 
-      ////****************************************************** INPUT ^^^^^^^^^^^^^^^^^^^^^
-      constexpr double c_light = 2.99792458E8;
-      GenParticle *gen;
-      Candidate *candidate;
-      Int_t pdgCode;
-      TClonesArray *branchParticle = treeReader->UseBranch("Particle");
-      TClonesArray *branchHepMCEvent = treeReader->UseBranch("Event");
-      for (Int_t entry = 0; entry < numberOfEvents && !interrupted; ++entry) {
-        treeReader->ReadEntry(entry);
-        for(Int_t j = 0; j < branchParticle->GetEntriesFast(); j++) {
-          gen = (GenParticle *)branchParticle->At(j);
-          candidate = modularDelphes->GetFactory()->NewCandidate();
-          candidate->Momentum = gen->P4();
-          candidate->Position.SetXYZT(gen->X, gen->Y, gen->Z, gen->T * 1.0E3 * c_light);
-          candidate->PID = gen->PID;
-          candidate->Status = gen->Status;
-          candidate->M1 = gen->M1;
-          candidate->M2 = gen->M2;
-          candidate->D1 = gen->D1;
-          candidate->D2 = gen->D2;
-          candidate->Charge = gen->Charge;
-          candidate->Mass = gen->Mass;
-          allParticleOutputArray->Add(candidate);
-          pdgCode = TMath::Abs(gen->PID);
-          if(gen->Status == 1) {
-            stableParticleOutputArray->Add(candidate);
-          } else if(pdgCode <= 5 || pdgCode == 21 || pdgCode == 15) {
-            partonOutputArray->Add(candidate);
-          }
+
+    ////****************************************************** INPUT ^^^^^^^^^^^^^^^^^^^^^
+    constexpr double c_light = 2.99792458E8;
+    GenParticle *gen;
+    Candidate *candidate;
+    Int_t pdgCode;
+    TClonesArray *branchParticle = treeReader->UseBranch("Particle");
+    TClonesArray *branchHepMCEvent = treeReader->UseBranch("Event");
+    for (Int_t entry = 0; entry < numberOfEvents && !interrupted; ++entry) {
+      treeReader->ReadEntry(entry);
+      for(Int_t j = 0; j < branchParticle->GetEntriesFast(); j++) {
+        gen = (GenParticle *)branchParticle->At(j);
+        candidate = modularDelphes->GetFactory()->NewCandidate();
+        candidate->Momentum = gen->P4();
+        candidate->Position.SetXYZT(gen->X, gen->Y, gen->Z, gen->T * 1.0E3 * c_light);
+        candidate->PID = gen->PID;
+        candidate->Status = gen->Status;
+        candidate->M1 = gen->M1;
+        candidate->M2 = gen->M2;
+        candidate->D1 = gen->D1;
+        candidate->D2 = gen->D2;
+        candidate->Charge = gen->Charge;
+        candidate->Mass = gen->Mass;
+        allParticleOutputArray->Add(candidate);
+        pdgCode = TMath::Abs(gen->PID);
+        if(gen->Status == 1) {
+          stableParticleOutputArray->Add(candidate);
+        } else if(pdgCode <= 5 || pdgCode == 21 || pdgCode == 15) {
+          partonOutputArray->Add(candidate);
         }
-        ////****************************************************** INPUT ^^^^^^^^^^^^^^^^^^^^^
+      }
+      ////****************************************************** INPUT ^^^^^^^^^^^^^^^^^^^^^
 
-        modularDelphes->ProcessTask();
+      modularDelphes->ProcessTask();
 
+        unsigned int collcounter = 0;
         for(int b = 0; b < nParams; b += 3) {
           TString input = branches[b].GetString();
           TString name = branches[b + 1].GetString();
           TString className = branches[b + 2].GetString();
           //std::cout << input << "\t" << name << "\t" << className << std::endl;
-          if (input ==  "FatJetFinder/jets") {
-            auto mcp1 = mcps.create();
-            mcp1.setMass( 0.938 ) ;
-            mcp1.setMomentum( { 0.000, 0.000, 7000.000 }  ) ;
-            auto mcp2 = mcps.create();
-            mcp2.setMass( 0.938 ) ;
-            mcp2.setMomentum( { 0.000, 0.000, -7000.000 }  ) ;
-
-            auto mcp3 = mcps.create();
-            mcp3.setMass(0.0) ;
-            mcp3.setMomentum( {  0.750, -1.569, 32.191 }  ) ;
-
-          }
-          if (className ==  "Jet") {
+          if (className == "Jet") {
+            edm4hep::ReconstructedParticleCollection& mcps = recPartCollVec[collcounter++];
             const TObjArray* delphesColl = modularDelphes->ImportArray(input);
             for (int j = 0; j < delphesColl->GetEntries(); j++) {
               auto cand = static_cast<Candidate*>(delphesColl->At(j));
-              std::cout << cand->Momentum.Pt() << " ";
+              auto mcp1 = mcps.create();
+              mcp1.setMass( cand->Mass ) ;
+              mcp1.setCharge( cand->Charge );
+              mcp1.setMomentum( { cand->Momentum.Px(), cand->Momentum.Py(), cand->Momentum.Pz() }  ) ;
+              //TODO set particleID
+              //TODO set location
+              //TODO ...
             }
-            std::cout << std::endl;
           }
         }
         modularDelphes->Clear();
-
         writer.writeEvent();
         store.clearCollections();
-
         progressBar.Update(eventCounter, eventCounter);
         ++eventCounter;
       }
@@ -215,7 +224,6 @@ int main(int argc, char *argv[]) {
       progressBar.Finish();
       writer.finish();
       delete treeReader;
-
       modularDelphes->FinishTask();
       cout << "** Exiting..." << endl;
       return 0;

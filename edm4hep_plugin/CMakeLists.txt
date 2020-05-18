@@ -14,5 +14,5 @@ target_link_libraries(DelphesEDM4HEP Delphes)
 install(TARGETS DelphesEDM4HEP DESTINATION bin)
 
 add_executable(DelphesROOT_EDM4HEP DelphesROOT_EDM4HEP.cpp Delphes.cc)
-target_link_libraries(DelphesROOT_EDM4HEP Delphes EDM4HEP::edm4hep podio::podioRootIO)
+target_link_libraries(DelphesROOT_EDM4HEP Delphes EDM4HEP::edm4hep EDM4HEP::edm4hepDict podio::podioRootIO)
 install(TARGETS DelphesROOT_EDM4HEP DESTINATION bin)
