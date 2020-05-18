@@ -50,6 +50,14 @@
 #include "ExRootAnalysis/ExRootTreeReader.h"
 #include "ExRootAnalysis/ExRootTreeWriter.h"
 
+// podio specific includes
+#include "podio/EventStore.h"
+#include "podio/ROOTWriter.h"
+
+
+#include "edm4hep/ReconstructedParticleCollection.h"
+#include "edm4hep/MCParticleCollection.h"
+
 
 using std::cout;
 using std::cerr;
@@ -88,7 +96,10 @@ int main(int argc, char *argv[]) {
 
 
   try {
-     outputFile = std::unique_ptr<TFile>(TFile::Open(argv[2], "RECREATE"));
+
+  podio::EventStore store;
+  podio::ROOTWriter  writer("edm4hep_out.root", &store);
+  outputFile = std::unique_ptr<TFile>(TFile::Open(argv[2], "RECREATE"));
 
     treeWriter = new ExRootTreeWriter(outputFile.get(), "Delphes");
     branchEvent = treeWriter->NewBranch("Event", HepMCEvent::Class());
@@ -98,14 +109,19 @@ int main(int argc, char *argv[]) {
 
     auto modularDelphes = std::make_unique<Delphes>("Delphes");
     modularDelphes->SetConfReader(confReader.get());
-    //modularDelphes->SetTreeWriter(treeWriter);
+
+    ExRootConfParam branches = confReader->GetParam("TreeWriter::Branch");
+    int nParams = branches.GetSize();
+
+    // create the collections to be written
+    auto& mcps  = store.create<edm4hep::MCParticleCollection>("FatJet");
+    writer.registerForWrite("FatJet");
 
     auto chain = std::make_unique<TChain>("Delphes");
 
     auto factory = modularDelphes->GetFactory(); // memory managed in Delphes class
 
     // has to happen before InitTask
-    //TObjArray *allParticleOutputArray = 0, *stableParticleOutputArray = 0, *partonOutputArray = 0;
     TObjArray* allParticleOutputArray = modularDelphes->ExportArray("allParticles");
     TObjArray* stableParticleOutputArray = modularDelphes->ExportArray("stableParticles");
     TObjArray* partonOutputArray = modularDelphes->ExportArray("partons");
@@ -119,16 +135,12 @@ int main(int argc, char *argv[]) {
     }
 
       ExRootTreeReader *treeReader = new ExRootTreeReader(chain.get());
-
       numberOfEvents = treeReader->GetEntries();
 
-      //if(numberOfEvents <= 0) continue;
-      //ExRootProgressBar progressBar(numberOfEvents - 1);
       ExRootProgressBar progressBar(-1);
       // Loop over all objects
       eventCounter = 0;
       modularDelphes->Clear();
-      //treeWriter->Clear();
 
       ////****************************************************** INPUT ^^^^^^^^^^^^^^^^^^^^^
       constexpr double c_light = 2.99792458E8;
@@ -164,28 +176,47 @@ int main(int argc, char *argv[]) {
 
         modularDelphes->ProcessTask();
 
-        //******************************************************************************** todo: edm4hep
-        const TObjArray* delphesColl = modularDelphes->ImportArray("FatJetFinder/jets");
-        for (int j = 0; j < delphesColl->GetEntries(); j++) {
-          auto cand = static_cast<Candidate*>(delphesColl->At(j));
-          std::cout << cand->Momentum.Pt() << " ";
-        }
-        std::cout << std::endl;
-        //******************************************************************************** todo: edm4hep
+        for(int b = 0; b < nParams; b += 3) {
+          TString input = branches[b].GetString();
+          TString name = branches[b + 1].GetString();
+          TString className = branches[b + 2].GetString();
+          //std::cout << input << "\t" << name << "\t" << className << std::endl;
+          if (input ==  "FatJetFinder/jets") {
+            auto mcp1 = mcps.create();
+            mcp1.setMass( 0.938 ) ;
+            mcp1.setMomentum( { 0.000, 0.000, 7000.000 }  ) ;
+            auto mcp2 = mcps.create();
+            mcp2.setMass( 0.938 ) ;
+            mcp2.setMomentum( { 0.000, 0.000, -7000.000 }  ) ;
 
-        //treeWriter->Fill();
+            auto mcp3 = mcps.create();
+            mcp3.setMass(0.0) ;
+            mcp3.setMomentum( {  0.750, -1.569, 32.191 }  ) ;
+
+          }
+          if (className ==  "Jet") {
+            const TObjArray* delphesColl = modularDelphes->ImportArray(input);
+            for (int j = 0; j < delphesColl->GetEntries(); j++) {
+              auto cand = static_cast<Candidate*>(delphesColl->At(j));
+              std::cout << cand->Momentum.Pt() << " ";
+            }
+            std::cout << std::endl;
+          }
+        }
         modularDelphes->Clear();
-        //treeWriter->Clear();
+
+        writer.writeEvent();
+        store.clearCollections();
+
         progressBar.Update(eventCounter, eventCounter);
         ++eventCounter;
       }
       progressBar.Update(eventCounter, eventCounter, kTRUE);
       progressBar.Finish();
-      delete treeReader; //todo: edm4hep
+      writer.finish();
+      delete treeReader;
 
       modularDelphes->FinishTask();
-      //treeWriter->Write(); 
-      //todo: edm4hep
       cout << "** Exiting..." << endl;
       return 0;
     } catch(std::runtime_error &e) {
